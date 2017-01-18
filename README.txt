@@ -1,4 +1,4 @@
-doit.py
+doit-probe-connects.py
   uses probe up/down to output something for plotting, see *plot-nl* for how to actually plot it
 
 doit-routing-sg-inrdb.py
