@@ -8,11 +8,10 @@ import re
 import arrow
 
 now = arrow.utcnow()
-END=now.timestamp
-START=now.replace(days=-1)
-CC=sys.argv[1]
 
-START_TS = arrow.get(START).timestamp
+END=now.timestamp
+START=now.replace(days=-1).timestamp
+CC=sys.argv[1]
 
 probes = {}
 filters = {'country_code': CC}
@@ -50,13 +49,17 @@ for oui in oui2prb.keys():
 
 print >>sys.stderr, "init done!"
 
-proc = subprocess.Popen("msmfetch 7000 %s %s" % (START,END), shell=True,stdout=subprocess.PIPE)
+api_call="https://atlas.ripe.net/api/v2/measurements/7000/results?start="+str(START)+"&stop="+str(END)+"&format=txt"
+r = requests.get(api_call)
+if r.status_code != 200:
+	print >>sys.stderr, "Received status code "+str(r.status_code)+" from "+api_call
+	sys.exit(-1)
 
 p2series = {}
 
 max_ts = None
 
-for line in iter(proc.stdout.readline,''):
+for line in r.text.splitlines():
    d = json.loads( line )
    if d['prb_id'] not in probes:
       continue
@@ -69,7 +72,7 @@ for line in iter(proc.stdout.readline,''):
          p2series[ p ].append( [ ts, None ] )
    else: 
       if d['event'] == 'disconnect':
-         p2series[ p ] = [ [ START_TS, ts ] ]
+         p2series[ p ] = [ [ START, ts ] ]
       if d['event'] == 'connect':
          p2series[ p ] = [ [ ts, None ] ]
    max_ts = ts
