@@ -1,0 +1,14 @@
+generic gnuplotting prototype to explore Internet resource timelines
+
+plotme -t probe-disconnects -r 100 -l "Amsterdam,NL"
+plotme -t bgp
+plotme -t resolvers
+
+grouping of lines:  (-g option?)
+  -> by ASN
+  -> by signal similarity
+  -> from less to more signal
+
+coloring of lines:  (-c option?)
+  -> by ASN
+  -> by geographic location
