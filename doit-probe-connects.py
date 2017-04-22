@@ -147,11 +147,14 @@ unset ytics
 set title "RIPE Atlas probes in {CC} connected to RIPE Atlas infrastucture\\\n(only probes with disconnects shown)"
 
 set ylabel "Probes"
-set xlabel "Time"
+set xlabel "Time (UTC)"
 
 set output "{CC}.{START}.png"
 plot "{PLFILE}" u 1:2:($3-$1):(0) w vectors nohead lc rgb "#4682b4"
    """.format( CC=args.CC, START=args.START, PLFILE=datafile )
+
+## make sure local env is UTC
+os.environ['TZ']='UTC'
 
 os.system("gnuplot < %s" % plotfile )
 os.system("open %s.%s.png" % (args.CC,args.START) )
