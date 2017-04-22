@@ -6,15 +6,50 @@ import ujson as json
 import sys
 import re
 import arrow
+import argparse
+import os
 
-now = arrow.utcnow()
+parser = argparse.ArgumentParser(description='Plot probe disconnects')
+parser.add_argument('-s',dest='START', help='start time')
+parser.add_argument('-e',dest='END', help='end time')
+parser.add_argument('-c',dest='CC', help='country code (list)')
+parser.add_argument('-a',dest='ASN', help='asn (list)')
+parser.add_argument('-l',dest='LOC', help='location (ie. city)')
+args = parser.parse_args()
 
-END=now.timestamp
-START=now.replace(days=-1).timestamp
-CC=sys.argv[1]
+## fix some to defaults
+if not args.START and not args.END:
+   now = arrow.utcnow()
+   args.END   = now.timestamp
+   args.START = now.replace(days=-1).timestamp
+elif not args.START and args.END:
+   # do 1 day
+   end = arrow.get( args.END )
+   args.END   = end.timestamp
+   args.START = end.replace(days=-1).timestamp
+elif args.START and not args.END:
+   # do 1 day
+   start = arrow.get( args.END )
+   args.START = start.timestamp
+   args.END   = start.replace(days=+1).timestamp
+elif args.START and args.END:
+   args.START = arrow.get( args.START ).timestamp
+   args.END   = arrow.get( args.END   ).timestamp
+
+filters = {}
+if args.CC:
+   filters['country_code'] = args.CC
+elif args.ASN:
+   filters['asn_v4'] = args.ASN
+elif args.LOC:
+   pass
+   #TODO
+else:
+   print >>sys.stderr, "needs either country,asns or location"
+   sys.exit(1)
+
 
 probes = {}
-filters = {'country_code': CC}
 pr_list = ProbeRequest(**filters)
 oui2prb = {}
 prb2oui = {}
@@ -49,7 +84,7 @@ for oui in oui2prb.keys():
 
 print >>sys.stderr, "init done!"
 
-api_call="https://atlas.ripe.net/api/v2/measurements/7000/results?start="+str(START)+"&stop="+str(END)+"&format=txt"
+api_call="https://atlas.ripe.net/api/v2/measurements/7000/results?start=%s&stop=%s&format=txt" % ( args.START, args.END )
 r = requests.get(api_call)
 if r.status_code != 200:
 	print >>sys.stderr, "Received status code "+str(r.status_code)+" from "+api_call
@@ -72,15 +107,15 @@ for line in r.text.splitlines():
          p2series[ p ].append( [ ts, None ] )
    else: 
       if d['event'] == 'disconnect':
-         p2series[ p ] = [ [ START, ts ] ]
+         p2series[ p ] = [ [ args.START, ts ] ]
       if d['event'] == 'connect':
          p2series[ p ] = [ [ ts, None ] ]
    max_ts = ts
 
 idx=0
-outfile = "%s.log" % CC
-print >>sys.stderr,"output in %s" % outfile
-with open(outfile ,'w') as outf:
+datafile = "/tmp/.data.%s" % os.getpid()
+print >>sys.stderr,"output in %s" % datafile
+with open(datafile ,'w') as outf:
    for p,series in p2series.iteritems():
       ## fix end of time
       if series[-1][1] == None:
@@ -90,3 +125,33 @@ with open(outfile ,'w') as outf:
             s[1] = s[0] # ??!?! 
          print >>outf, "%s %s %s %s" % ( s[0],idx, s[1], idx )
       idx+=1
+
+### now create gnuplot file
+plotfile = "/tmp/.plot.%s" % os.getpid()
+print >>sys.stderr,"plotfile in %s" % plotfile
+with open(plotfile, 'w') as outf:
+   print >>outf, """
+set term pngcairo size 1000,600
+
+set grid xtics
+set tics nomirror
+set border 3
+unset key
+
+set xdata time
+set timefmt "%s"
+set format x "%d %b-%Hh"
+set xtics rotate
+unset ytics
+
+set title "RIPE Atlas probes in {CC} connected to RIPE Atlas infrastucture\\\n(only probes with disconnects shown)"
+
+set ylabel "Probes"
+set xlabel "Time"
+
+set output "{CC}.{START}.png"
+plot "{PLFILE}" u 1:2:($3-$1):(0) w vectors nohead lc rgb "#4682b4"
+   """.format( CC=args.CC, START=args.START, PLFILE=datafile )
+
+os.system("gnuplot < %s" % plotfile )
+os.system("open %s.%s.png" % (args.CC,args.START) )
