@@ -119,7 +119,8 @@ with open(datafile ,'w') as outf:
    for p,series in p2series.iteritems():
       ## fix end of time
       if series[-1][1] == None:
-         series[-1][1] = max_ts
+         #series[-1][1] = max_ts
+         series[-1][1] = args.END
       for s in series:
          if s[1] == None:
             s[1] = s[0] # ??!?! 
