@@ -18,6 +18,8 @@ END_T = arrow.get(sys.argv[2]).timestamp
 for arg in sys.argv[3:]:
    asns.append( arg )
 
+print >>sys.stderr, "start:%s end:%s" % ( START_T, END_T )
+
 idx=0
 pfx2idx = {}
 idx2pfx = {}
@@ -51,8 +53,10 @@ for aidx,asn in enumerate( asns ):
          if end > END_T:
             end = END_T
          has_data = True
+         print >>sys.stderr, "s: %s e:%s" % (start,end-start)
          data.append([start,idx,end-start,aidx])
       if has_data == True:
+         #print >>sys.stderr, line
          pfx2idx[ pfx ] = idx
          idx2pfx[ idx ] = pfx
          idx += 1
@@ -74,20 +78,19 @@ print cbtics_txt
 with open(tmpplot,'w') as fh:
    print >>fh, """
 set term pdf
-set term pdf
 set grid xtics
 set palette model RGB
 #set palette model RGB defined (0 "green", 1 "dark-green", 2 "yellow", 3 "dark-yellow", 4 "red", 5 "dark-red", 6 "orange")
-set title "Networks in Gambia as seen in RIPE RIS/BGP (2016-11-30)"
+set title "Networks as seen in RIPE RIS/BGP"
 set palette maxcolors 7
-set palette model RGB defined (0 "#3A7728", 1 "#0C1C8C", 2 "#CE1126", 3 "orange", 4 "purple", 5 "grey", 6 "yellow")
+#set palette model RGB defined (0 "#3A7728", 1 "#0C1C8C", 2 "#CE1126", 3 "orange", 4 "purple", 5 "grey", 6 "yellow")
 set output "t.pdf"
 set timefmt "%%s"
 set xdata time
 unset key
 set xlabel "time"
 set ylabel "prefixes"
-set xrange ["%d":"%d"]
+#set xrange ["%d":"%d"]
 set ytics format ""
 set cbtics (%s)
 set rmargin at screen 0.80
