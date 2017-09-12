@@ -15,6 +15,7 @@ parser.add_argument('-e',dest='END', help='end time')
 parser.add_argument('-c',dest='CC', help='country code (list)')
 parser.add_argument('-a',dest='ASN', help='asn (list)')
 parser.add_argument('-l',dest='LOC', help='location (ie. city)')
+parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
 args = parser.parse_args()
 
 ## fix some to defaults
@@ -36,17 +37,34 @@ elif args.START and args.END:
    args.START = arrow.get( args.START ).timestamp
    args.END   = arrow.get( args.END   ).timestamp
 
+if not args.RADIUS:
+	args.RADIUS=50
+
+def locstr2latlng( locstring ):
+   if 1: #try:
+      geocode_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % locstring
+      r = requests.get( geocode_url )
+      resp = r.json()
+      #print >>sys.stderr, "%s" % (resp)
+      ll = resp['results'][0]['geometry']['location']
+      return ( ll['lat'], ll['lng'] )
+   #except:
+   #   print "could not determine lat/long for '%s'" % ( locstring )
+		
+
 filters = {}
 if args.CC:
    filters['country_code'] = args.CC
 elif args.ASN:
    filters['asn_v4'] = args.ASN
 elif args.LOC:
-   pass
-   #TODO
+	ll = locstr2latlng( args.LOC )
+	filters['radius'] = '%s,%s:%s' % (ll[0],ll[1],args.RADIUS)
 else:
    print >>sys.stderr, "needs either country,asns or location"
    sys.exit(1)
+
+print >>sys.stderr, "filters: %s" % ( filters )
 
 
 probes = {}
