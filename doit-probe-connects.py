@@ -18,6 +18,8 @@ parser.add_argument('-l',dest='LOC', help='location (ie. city)')
 parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
 args = parser.parse_args()
 
+selector_lst = [] # contains textual desc of selector
+
 ## fix some to defaults
 if not args.START and not args.END:
    now = arrow.utcnow()
@@ -55,12 +57,16 @@ def locstr2latlng( locstring ):
 filters = {}
 if args.CC:
    filters['country_code'] = args.CC
-elif args.ASN:
+   selector_lst.append( "country:%s" % ( args.CC, ) )
+if args.ASN:
    filters['asn_v4'] = args.ASN
-elif args.LOC:
-	ll = locstr2latlng( args.LOC )
-	filters['radius'] = '%s,%s:%s' % (ll[0],ll[1],args.RADIUS)
-else:
+   selector_lst.append( "asn:%s" % ( args.ASN, ) )
+if args.LOC:
+   ll = locstr2latlng( args.LOC )
+   filters['radius'] = '%s,%s:%s' % (ll[0],ll[1],args.RADIUS)
+   selector_lst.append( "location:%s" % ( args.LOC, ) )
+## args asn cc loc can be combined, but need at least 1 of them
+if not args.CC and not args.ASN and not args.LOC:
    print >>sys.stderr, "needs either country,asns or location"
    sys.exit(1)
 
@@ -108,36 +114,44 @@ if r.status_code != 200:
 	print >>sys.stderr, "Received status code "+str(r.status_code)+" from "+api_call
 	sys.exit(-1)
 
-p2series = {}
-
 max_ts = None
 
 for line in r.text.splitlines():
    d = json.loads( line )
    if d['prb_id'] not in probes:
       continue
-   p = d['prb_id']
+   pid = d['prb_id']
    ts = d['timestamp']
-   if p in p2series:
+   if 'series' in probes[ pid ]:
       if d['event'] == 'disconnect':
-         p2series[ p ][-1][1] = ts
+         probes[ pid ]['series'][-1][1] = ts
       if d['event'] == 'connect':
-         p2series[ p ].append( [ ts, None ] )
+         probes[ pid ]['series'].append( [ ts, None ] )
    else: 
       if d['event'] == 'disconnect':
-         p2series[ p ] = [ [ args.START, ts ] ]
+         probes[ pid ]['series'] = [ [ args.START, ts ] ]
       if d['event'] == 'connect':
-         p2series[ p ] = [ [ ts, None ] ]
+         probes[ pid ]['series'] = [ [ ts, None ] ]
    max_ts = ts
+
+##TODO ordering of series
 
 idx=0
 datafile = "/tmp/.data.%s" % os.getpid()
+ykeys = []
 print >>sys.stderr,"output in %s" % datafile
 with open(datafile ,'w') as outf:
-   for p,series in p2series.iteritems():
+   for k,p in probes.iteritems():
+      if not 'series' in p and p['status']['id'] == 1:
+            p['series'] = [ [ args.START, args.END ] ]
+      elif not 'series' in p:
+            continue
+
+      series = p['series']
+      ykeys.append( '"%s/AS%s" %s' % (k,p['asn_v4'],idx) )
+
       ## fix end of time
       if series[-1][1] == None:
-         #series[-1][1] = max_ts
          series[-1][1] = args.END
       for s in series:
          if s[1] == None:
@@ -147,6 +161,7 @@ with open(datafile ,'w') as outf:
 
 ### now create gnuplot file
 plotfile = "/tmp/.plot.%s" % os.getpid()
+ytics = ",".join( ykeys )
 print >>sys.stderr,"plotfile in %s" % plotfile
 with open(plotfile, 'w') as outf:
    print >>outf, """
@@ -160,17 +175,18 @@ unset key
 set xdata time
 set timefmt "%s"
 set format x "%d %b-%Hh"
+set yrange [-0.2:]
 set xtics rotate
-unset ytics
+set ytics ({YTICS})
 
-set title "RIPE Atlas probes in {CC} connected to RIPE Atlas infrastucture\\\n(only probes with disconnects shown)"
+set title "RIPE Atlas probes status {SELECTOR_STR}"
 
 set ylabel "Probes"
 set xlabel "Time (UTC)"
 
 set output "{CC}.{START}.png"
-plot "{PLFILE}" u 1:2:($3-$1):(0) w vectors nohead lc rgb "#4682b4"
-   """.format( CC=args.CC, START=args.START, PLFILE=datafile )
+plot "{PLFILE}" u 1:2:($3-$1):(0) w vectors nohead lw 5 lc rgb "#4682b4"
+   """.format( YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")" )
 
 ## make sure local env is UTC
 os.environ['TZ']='UTC'
