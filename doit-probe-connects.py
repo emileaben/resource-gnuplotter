@@ -21,8 +21,8 @@ args = parser.parse_args()
 selector_lst = [] # contains textual desc of selector
 
 ## fix some to defaults
+now = arrow.utcnow()
 if not args.START and not args.END:
-   now = arrow.utcnow()
    args.END   = now.timestamp
    args.START = now.replace(days=-1).timestamp
 elif not args.START and args.END:
@@ -31,10 +31,9 @@ elif not args.START and args.END:
    args.END   = end.timestamp
    args.START = end.replace(days=-1).timestamp
 elif args.START and not args.END:
-   # do 1 day
-   start = arrow.get( args.END )
+   start = arrow.get( args.START )
    args.START = start.timestamp
-   args.END   = start.replace(days=+1).timestamp
+   args.END   = now.timestamp
 elif args.START and args.END:
    args.START = arrow.get( args.START ).timestamp
    args.END   = arrow.get( args.END   ).timestamp
@@ -70,41 +69,14 @@ if not args.CC and not args.ASN and not args.LOC:
    print >>sys.stderr, "needs either country,asns or location"
    sys.exit(1)
 
+print >>sys.stderr, "times: %s - %s " % ( args.START, args.END )
 print >>sys.stderr, "filters: %s" % ( filters )
 
 
 probes = {}
 pr_list = ProbeRequest(**filters)
-oui2prb = {}
-prb2oui = {}
-oui_set = set()
 for p in pr_list:
    probes[ p['id'] ] = p
-
-'''
-   if p['address_v6'] != None:
-      #mre = re.match('\:(....)\:(..})ff\:fe..\:', p['address_v6'])
-      mre = re.search(r'\:(\w\w)(\w\w)\:(\w\w)ff\:fe(\w\w)\:(\w\w)(\w\w)$', p['address_v6'])
-      if mre:
-         # U/L bit in group1
-         g1 = int(mre.group(1),16)
-         g2 = "%02x" % ( g1 & 0xfd )
-         oui = "%s:%s:%s" % (g2, mre.group(2), mre.group(3))
-         print oui
-         # p = probe, v = vendor
-         oui_set.add( oui )
-         oui2prb.setdefault( oui, {'p': set(),'v': None})
-         oui2prb[ oui ]['p'].add( p['id'] )
-         prb2oui[ p['id'] ] = oui
-for oui in oui2prb.keys():
-   print "%s %s" % (oui, len( oui2prb[oui]['p'] ) )
-   url = "http://macvendors.co/api/%s" % oui
-   res = requests.get( url )
-   j = res.json()
-   if 'result' in j:
-      if 'company' in j['result']:
-         print j['result']['company']
-'''
 
 print >>sys.stderr, "init done!"
 
@@ -162,6 +134,7 @@ with open(datafile ,'w') as outf:
 ### now create gnuplot file
 plotfile = "/tmp/.plot.%s" % os.getpid()
 ytics = ",".join( ykeys )
+fname = ".".join(map(lambda x: x.replace('/','_') and x.replace(',','_') and x.replace(':','_') , selector_lst ) ) + ".png"
 print >>sys.stderr,"plotfile in %s" % plotfile
 with open(plotfile, 'w') as outf:
    print >>outf, """
@@ -184,12 +157,13 @@ set title "RIPE Atlas probes status {SELECTOR_STR}"
 set ylabel "Probes"
 set xlabel "Time (UTC)"
 
-set output "{CC}.{START}.png"
+set output "{FNAME}"
 plot "{PLFILE}" u 1:2:($3-$1):(0) w vectors nohead lw 5 lc rgb "#4682b4"
-   """.format( YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")" )
+   """.format( FNAME=fname, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")" )
 
 ## make sure local env is UTC
 os.environ['TZ']='UTC'
 
+
 os.system("gnuplot < %s" % plotfile )
-os.system("open %s.%s.png" % (args.CC,args.START) )
+os.system("open %s" % fname )
