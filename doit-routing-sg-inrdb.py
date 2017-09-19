@@ -9,7 +9,7 @@ from tempfile import mkstemp
 ### TODO in radix
 
 ## do decent optparse
-
+outfile = "t.png"
 
 asns = []
 countries = []
@@ -24,7 +24,7 @@ idx     = 0
 pfx2idx = {}
 idx2pfx = {}
 data    = []
-cbtic s = []
+cbtics  = []
 
 for aidx,asn in enumerate( asns ):
    cbtics.append( '"%s" %s' % (asn, aidx) )
@@ -67,39 +67,46 @@ tmpfile = "/tmp/ccviz.%s" % pid
 tmpplot = "/tmp/plt.%s" % pid
 
 # print data to file
-with open(tmpfile,'w') as fh:
+with open(tmpfile, 'w') as fh:
 	for drow in data:
 		print >>fh, "%s %s %s %s" % tuple(drow)
+	fh.close()
 
 ## ASN tics
 cbtics_txt = ','.join( cbtics )
-print cbtics_txt
 
 with open(tmpplot,'w') as fh:
 	print >>fh, """
-set term pdf
-set grid xtics
+set term pngcairo size 1000,700
+
 set palette model RGB
-#set palette model RGB defined (0 "green", 1 "dark-green", 2 "yellow", 3 "dark-yellow", 4 "red", 5 "dark-red", 6 "orange")
-set title "Networks as seen in RIPE RIS/BGP"
 set palette maxcolors 7
-#set palette model RGB defined (0 "#3A7728", 1 "#0C1C8C", 2 "#CE1126", 3 "orange", 4 "purple", 5 "grey", 6 "yellow")
-set output "t.pdf"
-set timefmt "%%s"
-set xdata time
+
 unset key
+set title "Networks as seen in RIPE RIS/BGP"
+
+set grid xtics
+
+set xdata time
+set timefmt "%%s"
+
 set xlabel "time"
+set xtics rotate
+set format x "%%Y-%%m-%%d"
+
 set ylabel "prefixes"
-#set xrange ["%d":"%d"]
 set ytics format ""
-set cbtics (%s)
+
 set rmargin at screen 0.80
+set cbtics (%s)
 set cbtics font ",9"
+
+set output "%s"
 plot "%s" u 1:2:3:(0):4 w vectors nohead lw 3 lc palette
-""" % ( START_T, END_T, cbtics_txt, tmpfile )
+""" % ( cbtics_txt, outfile, tmpfile )
 
 os.system("gnuplot < %s" % tmpplot)
 print >>sys.stderr, "data tmpfile: %s" % (tmpfile)
 print >>sys.stderr, "plot tmpfile: %s" % (tmpplot)
-print >>sys.stderr, "output in t.pdf"
+print >>sys.stderr, "output in %s"     % (outfile)
 			
