@@ -83,12 +83,13 @@ with open(tmpplot,'w') as fh:
 set term pngcairo size 1000,700
 
 set palette model RGB
-set palette maxcolors 7
 
 unset key
 set title "Networks as seen in RIPE RIS/BGP"
 
 set grid xtics
+set border 3
+set tics nomirror
 
 set xdata time
 set timefmt "%%s"
