@@ -9,13 +9,15 @@ from tempfile import mkstemp
 ### TODO in radix
 
 ## do decent optparse
-outfile = "t.png"
 
-asns = []
+asns      = []
 countries = []
+
 START_T = arrow.get(sys.argv[1]).timestamp
-END_T = arrow.get(sys.argv[2]).timestamp
-for arg in sys.argv[3:]:
+END_T   = arrow.get(sys.argv[2]).timestamp
+CC      = sys.argv[3]
+
+for arg in sys.argv[4:]:
 	asns.append( arg )
 
 print >>sys.stderr, "start:%s end:%s" % ( START_T, END_T )
@@ -63,8 +65,9 @@ for aidx,asn in enumerate( asns ):
    idx += 3 #for each asn
 
 pid = os.getpid()
-tmpfile = "/tmp/ccviz.%s" % pid
-tmpplot = "/tmp/plt.%s" % pid
+tmpfile = "/tmp/ccviz.%s.%s" % (CC, pid)
+tmpplot = "/tmp/plt.%s.%s"   % (CC, pid)
+outfile = "%s.png"           % (CC)
 
 # print data to file
 with open(tmpfile, 'w') as fh:
@@ -109,4 +112,4 @@ os.system("gnuplot < %s" % tmpplot)
 print >>sys.stderr, "data tmpfile: %s" % (tmpfile)
 print >>sys.stderr, "plot tmpfile: %s" % (tmpplot)
 print >>sys.stderr, "output in %s"     % (outfile)
-			
+
