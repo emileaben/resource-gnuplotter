@@ -16,15 +16,15 @@ countries = []
 START_T = arrow.get(sys.argv[1]).timestamp
 END_T = arrow.get(sys.argv[2]).timestamp
 for arg in sys.argv[3:]:
-   asns.append( arg )
+	asns.append( arg )
 
 print >>sys.stderr, "start:%s end:%s" % ( START_T, END_T )
 
-idx=0
+idx     = 0
 pfx2idx = {}
 idx2pfx = {}
-data = []
-cbtics = []
+data    = []
+cbtic s = []
 
 for aidx,asn in enumerate( asns ):
    cbtics.append( '"%s" %s' % (asn, aidx) )
@@ -68,15 +68,15 @@ tmpplot = "/tmp/plt.%s" % pid
 
 # print data to file
 with open(tmpfile,'w') as fh:
-   for drow in data:
-      print >>fh, "%s %s %s %s" % tuple(drow)
+	for drow in data:
+		print >>fh, "%s %s %s %s" % tuple(drow)
 
 ## ASN tics
 cbtics_txt = ','.join( cbtics )
 print cbtics_txt
 
 with open(tmpplot,'w') as fh:
-   print >>fh, """
+	print >>fh, """
 set term pdf
 set grid xtics
 set palette model RGB
@@ -102,5 +102,4 @@ os.system("gnuplot < %s" % tmpplot)
 print >>sys.stderr, "data tmpfile: %s" % (tmpfile)
 print >>sys.stderr, "plot tmpfile: %s" % (tmpplot)
 print >>sys.stderr, "output in t.pdf"
-         
-
+			
