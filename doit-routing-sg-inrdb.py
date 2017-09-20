@@ -28,7 +28,7 @@ cbtics = []
 
 for aidx,asn in enumerate( asns ):
    cbtics.append( '"%s" %s' % (asn, aidx) )
-   cmd = "ido +minpwr 10 +M +oc +t +dc RIS_V_CC %s" % (asn)
+   cmd = "ido +minpwr 30 +M +oc +t +dc RIS_V_CC %s" % (asn)
    proc = subprocess.Popen( cmd, shell=True, stdout=subprocess.PIPE)
    for line in iter(proc.stdout.readline,''):
       line = line.rstrip('\n')
