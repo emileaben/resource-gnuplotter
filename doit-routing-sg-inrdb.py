@@ -27,6 +27,7 @@ pfx2idx = {}
 idx2pfx = {}
 data    = []
 cbtics  = []
+deltas  = {} # deltas[ts] => number added/removed at that timestamp
 
 for aidx,asn in enumerate( asns ):
 	cbtics.append( '"%s" %s' % (asn, aidx) )
@@ -61,6 +62,11 @@ for aidx,asn in enumerate( asns ):
 
 			data.append([start,idx,end-start,aidx])
 
+			deltas.setdefault(start, 0)
+			deltas.setdefault(end,   0)
+			deltas[start] = deltas[start] + 1
+			deltas[end]   = deltas[end]   - 1
+
 		if has_data == True:
 			pfx2idx[ pfx ] = idx
 			idx2pfx[ idx ] = pfx
@@ -69,15 +75,31 @@ for aidx,asn in enumerate( asns ):
 	idx += 3 #for each asn
 
 pid = os.getpid()
-tmpfile = "/tmp/ccviz.%s.%s" % (CC, pid)
-tmpplot = "/tmp/plt.%s.%s"   % (CC, pid)
-outfile = "%s.png"           % (CC)
+tmpfile = "/tmp/ccviz.%s.%s"            % (CC, pid)
+tmpplot = "/tmp/plt.%s.%s"              % (CC, pid)
+outfile = "%s.png"                      % (CC)
+timeseriesfile = "/tmp/ccviz.%s.ts.%s"  % (CC, pid)
 
 # print data to file
 with open(tmpfile, 'w') as fh:
 	for drow in data:
 		print >>fh, "%s %s %s %s" % tuple(drow)
 	fh.close()
+
+with open(timeseriesfile, 'w') as fh:
+	total = 0
+	# [:-1] in the loop here is to skip the last '0' point, because
+	# the deltas calculated above will subtract everything that 'ends'
+	# at the end of time
+	timestamps = sorted(deltas.keys())
+	for ts in timestamps[:-1]:
+		total = total + deltas[ts]
+		print >>fh, ts, total
+	# put a dummy point at the end, to fill out gnuplot lines
+	# to the right-most side
+	print >>fh, timestamps[-1], total
+	fh.close()
+
 
 ## ASN tics
 cbtics_txt = ','.join( cbtics )
@@ -89,7 +111,6 @@ set term pngcairo size 1000,700
 set palette model RGB
 
 unset key
-set title "Networks as seen in RIPE RIS"
 
 set grid xtics
 set border 3
@@ -110,8 +131,31 @@ set cbtics ({CBTICS})
 set cbtics font ",9"
 
 set output "{OUTFILE}"
-plot "{TMPFILE}" u 1:2:3:(0):4 w vectors nohead lw 3 lc palette
-""".format( CBTICS=cbtics_txt, OUTFILE=outfile, TMPFILE=tmpfile )
+
+set multiplot ti "Networks as seen in RIPE RIS"
+
+# = lower plot =============================================
+set lmargin at screen 0.05
+set bmargin at screen 0.2
+set tmargin at screen 0.75
+
+set ytics format ""
+
+plot "{TMPFILE}" using 1:2:3:(0):4 w vectors nohead lw 1.5 lc palette
+
+# = upper plot =============================================
+set bmargin at screen 0.8
+set tmargin at screen 0.95
+
+unset xlabel
+unset xtics
+set ylabel "#prefixes"
+set ytics format "%g"
+
+plot "{TIMESERIES}" using 1:2 w steps lw 1.5
+
+""".format( CBTICS=cbtics_txt, OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile )
+
 
 os.system("gnuplot < %s" % tmpplot)
 print >>sys.stderr, "data tmpfile: %s" % (tmpfile)
