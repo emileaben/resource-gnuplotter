@@ -59,7 +59,6 @@ for aidx,asn in enumerate( asns ):
 				end = END_T
 			has_data = True
 
-			print >>sys.stderr, "s: %s e:%s" % (start,end-start)
 			data.append([start,idx,end-start,aidx])
 
 		if has_data == True:
