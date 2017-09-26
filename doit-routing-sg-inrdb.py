@@ -23,8 +23,6 @@ for arg in sys.argv[4:]:
 print >>sys.stderr, "start:%s end:%s" % ( START_T, END_T )
 
 idx     = 0
-pfx2idx = {}
-idx2pfx = {}
 data    = []
 deltas  = {} # deltas[ts] => number added/removed at that timestamp
 
@@ -87,8 +85,6 @@ for aidx,asn in enumerate( asns ):
 			y_max[asn] = idx
 
 		if has_data == True:
-			pfx2idx[ pfx ] = idx
-			idx2pfx[ idx ] = pfx
 			idx += 1
 
 pid = os.getpid()
