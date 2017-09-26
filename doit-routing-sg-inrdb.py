@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import subprocess
 import os
+import hashlib
 import time
 import sys
 import arrow
@@ -26,11 +27,9 @@ idx     = 0
 pfx2idx = {}
 idx2pfx = {}
 data    = []
-cbtics  = []
 deltas  = {} # deltas[ts] => number added/removed at that timestamp
 
 for aidx,asn in enumerate( asns ):
-	cbtics.append( '"%s" %s' % (asn, aidx) )
 	cmd = "ido +minpwr 30 +M +oc +t +dc RIS_V_CC %s" % (asn)
 	proc = subprocess.Popen( cmd, shell=True, stdout=subprocess.PIPE)
 	for line in iter(proc.stdout.readline,''):
@@ -60,7 +59,10 @@ for aidx,asn in enumerate( asns ):
 				end = END_T
 			has_data = True
 
-			data.append([start,idx,end-start,aidx])
+			# hash the ASN and grab six hex digits to form the RGB value
+			rgb = "#" + hashlib.md5(str(asn)).hexdigest()[0:6]
+
+			data.append([start, idx, end-start, asn, pfx, rgb])
 
 			deltas.setdefault(start, 0)
 			deltas.setdefault(end,   0)
@@ -83,7 +85,7 @@ timeseriesfile = "/tmp/ccviz.%s.ts.%s"  % (CC, pid)
 # print data to file
 with open(tmpfile, 'w') as fh:
 	for drow in data:
-		print >>fh, "%s %s %s %s" % tuple(drow)
+		print >>fh, "%s %s %s %s %s %s" % tuple(drow)
 	fh.close()
 
 with open(timeseriesfile, 'w') as fh:
@@ -100,15 +102,20 @@ with open(timeseriesfile, 'w') as fh:
 	print >>fh, timestamps[-1], total
 	fh.close()
 
-
-## ASN tics
-cbtics_txt = ','.join( cbtics )
-
 with open(tmpplot,'w') as fh:
 	print >>fh, """
 set term pngcairo size 1000,700
 
 set palette model RGB
+
+# these functions are a bit ugly but they rip apart RGB values as strings
+# and turn them into RGB values for plotting
+red(colorstring)    = colorstring[2:3]
+green(colorstring)  = colorstring[4:5]
+blue(colorstring)   = colorstring[6:7]
+hex2dec(hex)        = gprintf("%0.f",int('0X'.hex))
+rgb(r,g,b)          = 65536*int(r)+256*int(g)+int(b)
+hex2rgbvalue(color) = rgb( hex2dec(red(color)), hex2dec(green(color)), hex2dec(blue(color)) )
 
 unset key
 
@@ -127,8 +134,6 @@ set ylabel "prefixes"
 set ytics format ""
 
 set rmargin at screen 0.80
-set cbtics ({CBTICS})
-set cbtics font ",9"
 
 set output "{OUTFILE}"
 
@@ -141,7 +146,7 @@ set tmargin at screen 0.75
 
 set ytics format ""
 
-plot "{TMPFILE}" using 1:2:3:(0):4 w vectors nohead lw 1.5 lc palette
+plot "{TMPFILE}" using 1:2:3:(0):(hex2rgbvalue(stringcolumn(6))) w vectors nohead lw 1.5 lc rgb variable
 
 # = upper plot =============================================
 set bmargin at screen 0.8
@@ -151,10 +156,11 @@ unset xlabel
 unset xtics
 set ylabel "#prefixes"
 set ytics format "%g"
+set yrange [0:*]
 
 plot "{TIMESERIES}" using 1:2 w steps lw 1.5
 
-""".format( CBTICS=cbtics_txt, OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile )
+""".format( OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile )
 
 
 os.system("gnuplot < %s" % tmpplot)
