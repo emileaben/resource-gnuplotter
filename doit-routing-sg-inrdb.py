@@ -13,9 +13,9 @@ from tempfile import mkstemp
 asns      = []
 countries = []
 
-START_T = arrow.get(sys.argv[1]).timestamp
-END_T   = arrow.get(sys.argv[2]).timestamp
-CC      = sys.argv[3]
+START_T   = arrow.get(sys.argv[1]).timestamp
+END_T     = arrow.get(sys.argv[2]).timestamp
+CC        = sys.argv[3]
 
 for arg in sys.argv[4:]:
 	asns.append( arg )
@@ -29,40 +29,45 @@ data    = []
 cbtics  = []
 
 for aidx,asn in enumerate( asns ):
-   cbtics.append( '"%s" %s' % (asn, aidx) )
-   cmd = "ido +minpwr 30 +M +oc +t +dc RIS_V_CC %s" % (asn)
-   proc = subprocess.Popen( cmd, shell=True, stdout=subprocess.PIPE)
-   for line in iter(proc.stdout.readline,''):
-      line = line.rstrip('\n')
-      if not line.startswith('BLOB'):
-         continue
-      s = line.split('\a')
-      fields = s.pop(0).split('|')
-      pfx = fields[2]
-      has_data = False
-      for tspec in s:
-         tparts = tspec.split()
-         if len(tparts) == 0:
-            continue
-         start = int(tparts[1])
-         end = int(tparts[3])
-         if end < START_T:
-            continue
-         if start < START_T:
-            start = START_T
-         if start > END_T:
-            continue
-         if end > END_T:
-            end = END_T
-         has_data = True
-         print >>sys.stderr, "s: %s e:%s" % (start,end-start)
-         data.append([start,idx,end-start,aidx])
-      if has_data == True:
-         #print >>sys.stderr, line
-         pfx2idx[ pfx ] = idx
-         idx2pfx[ idx ] = pfx
-         idx += 1
-   idx += 3 #for each asn
+	cbtics.append( '"%s" %s' % (asn, aidx) )
+	cmd = "ido +minpwr 30 +M +oc +t +dc RIS_V_CC %s" % (asn)
+	proc = subprocess.Popen( cmd, shell=True, stdout=subprocess.PIPE)
+	for line in iter(proc.stdout.readline,''):
+		line = line.rstrip('\n')
+		if not line.startswith('BLOB'):
+			continue
+
+		s = line.split('\a')
+		fields = s.pop(0).split('|')
+		pfx = fields[2]
+		has_data = False
+		for tspec in s:
+			tparts = tspec.split()
+			if len(tparts) == 0:
+				continue
+
+			# examplar timespec format: 'VALID: 1504516800 - 1505374500'
+			start = int(tparts[1])
+			end   = int(tparts[3])
+			if end < START_T:
+				continue
+			if start < START_T:
+				start = START_T
+			if start > END_T:
+				continue
+			if end > END_T:
+				end = END_T
+			has_data = True
+
+			print >>sys.stderr, "s: %s e:%s" % (start,end-start)
+			data.append([start,idx,end-start,aidx])
+
+		if has_data == True:
+			pfx2idx[ pfx ] = idx
+			idx2pfx[ idx ] = pfx
+			idx += 1
+
+	idx += 3 #for each asn
 
 pid = os.getpid()
 tmpfile = "/tmp/ccviz.%s.%s" % (CC, pid)
