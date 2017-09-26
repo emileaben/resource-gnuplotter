@@ -1,14 +1,13 @@
 #!/usr/bin/env python
-import subprocess
-import os
-import hashlib
-import time
-import sys
 import arrow
-from tempfile import mkstemp
+import hashlib
+import os
+import subprocess
+import sys
+from   tempfile import mkstemp
+import time
 
 ### TODO in radix
-
 ## do decent optparse
 
 asns      = []
