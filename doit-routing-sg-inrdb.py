@@ -150,6 +150,7 @@ set timefmt "%s"
 set xlabel "time"
 set xtics rotate
 set format x "%Y-%m-%d"
+set xrange [{START_TS}:{END_TS}]
 
 set ylabel "prefixes"
 set ytics format ""
@@ -182,7 +183,7 @@ set yrange [0:*]
 
 plot "{TIMESERIES}" using 1:2 w steps lw 1.5
 
-""".format( OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile, LABELS=labelsfile )
+""".format( OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile, LABELS=labelsfile, START_TS=START_T, END_TS=END_T )
 
 
 os.system("gnuplot < %s" % tmpplot)
