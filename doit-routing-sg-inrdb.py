@@ -96,22 +96,22 @@ set border 3
 set tics nomirror
 
 set xdata time
-set timefmt "%%s"
+set timefmt "%s"
 
 set xlabel "time"
 set xtics rotate
-set format x "%%Y-%%m-%%d"
+set format x "%Y-%m-%d"
 
 set ylabel "prefixes"
 set ytics format ""
 
 set rmargin at screen 0.80
-set cbtics (%s)
+set cbtics ({CBTICS})
 set cbtics font ",9"
 
-set output "%s"
-plot "%s" u 1:2:3:(0):4 w vectors nohead lw 3 lc palette
-""" % ( cbtics_txt, outfile, tmpfile )
+set output "{OUTFILE}"
+plot "{TMPFILE}" u 1:2:3:(0):4 w vectors nohead lw 3 lc palette
+""".format( CBTICS=cbtics_txt, OUTFILE=outfile, TMPFILE=tmpfile )
 
 os.system("gnuplot < %s" % tmpplot)
 print >>sys.stderr, "data tmpfile: %s" % (tmpfile)
