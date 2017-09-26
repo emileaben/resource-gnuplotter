@@ -131,6 +131,8 @@ with open(datafile ,'w') as outf:
          print >>outf, "%s %s %s %s" % ( s[0],idx, s[1], idx )
       idx+=1
 
+current_time=arrow.utcnow().timestamp
+
 ### now create gnuplot file
 plotfile = "/tmp/.plot.%s" % os.getpid()
 ytics = ",".join( ykeys )
@@ -147,19 +149,21 @@ unset key
 
 set xdata time
 set timefmt "%s"
-set format x "%d %b-%Hh"
+set format x "'%y-%m-%dT%H:%M"
 set yrange [-0.2:]
 set xtics rotate
 set ytics ({YTICS})
 
 set title "RIPE Atlas probes status {SELECTOR_STR}"
 
+set arrow from {CURRENT_TS},0 to {CURRENT_TS},graph({CURRENT_TS},1) nohead lt 0 lw 2
+
 set ylabel "Probes"
 set xlabel "Time (UTC)"
 
 set output "{FNAME}"
 plot "{PLFILE}" u 1:2:($3-$1):(0) w vectors nohead lw 5 lc rgb "#4682b4"
-   """.format( FNAME=fname, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")" )
+   """.format( FNAME=fname, CURRENT_TS=current_time, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")" )
 
 ## make sure local env is UTC
 os.environ['TZ']='UTC'
