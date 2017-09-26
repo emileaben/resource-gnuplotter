@@ -89,7 +89,7 @@ set term pngcairo size 1000,700
 set palette model RGB
 
 unset key
-set title "Networks as seen in RIPE RIS/BGP"
+set title "Networks as seen in RIPE RIS"
 
 set grid xtics
 set border 3
