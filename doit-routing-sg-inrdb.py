@@ -29,9 +29,19 @@ idx2pfx = {}
 data    = []
 deltas  = {} # deltas[ts] => number added/removed at that timestamp
 
+# use these for {ASN -> height} for ASN labels on the right edge
+y_min = {}
+y_max = {}
+
+last_time_seen = 0
+
 for aidx,asn in enumerate( asns ):
 	cmd = "ido +minpwr 30 +M +oc +t +dc RIS_V_CC %s" % (asn)
 	proc = subprocess.Popen( cmd, shell=True, stdout=subprocess.PIPE)
+
+	y_min.setdefault(asn, idx)
+	y_max.setdefault(asn, idx)
+
 	for line in iter(proc.stdout.readline,''):
 		line = line.rstrip('\n')
 		if not line.startswith('BLOB'):
@@ -46,6 +56,8 @@ for aidx,asn in enumerate( asns ):
 			if len(tparts) == 0:
 				continue
 
+			# we definitely have a time marker for this ASN
+			# note it, and give it an ID to be used later
 			# examplar timespec format: 'VALID: 1504516800 - 1505374500'
 			start = int(tparts[1])
 			end   = int(tparts[3])
@@ -57,6 +69,9 @@ for aidx,asn in enumerate( asns ):
 				continue
 			if end > END_T:
 				end = END_T
+			if end > last_time_seen:
+				last_time_seen = end
+
 			has_data = True
 
 			# hash the ASN and grab six hex digits to form the RGB value
@@ -69,23 +84,30 @@ for aidx,asn in enumerate( asns ):
 			deltas[start] = deltas[start] + 1
 			deltas[end]   = deltas[end]   - 1
 
+			# keep storing this
+			y_max[asn] = idx
+
 		if has_data == True:
 			pfx2idx[ pfx ] = idx
 			idx2pfx[ idx ] = pfx
 			idx += 1
 
-	idx += 3 #for each asn
-
 pid = os.getpid()
-tmpfile = "/tmp/ccviz.%s.%s"            % (CC, pid)
-tmpplot = "/tmp/plt.%s.%s"              % (CC, pid)
-outfile = "%s.png"                      % (CC)
-timeseriesfile = "/tmp/ccviz.%s.ts.%s"  % (CC, pid)
+tmpfile        = "/tmp/ccviz.%s.%s"        % (CC, pid)
+labelsfile     = "/tmp/ccviz.%s.labels.%s" % (CC, pid)
+timeseriesfile = "/tmp/ccviz.%s.ts.%s"     % (CC, pid)
+tmpplot        = "/tmp/plt.%s.%s"          % (CC, pid)
+outfile        = "%s.png"                  % (CC)
 
 # print data to file
 with open(tmpfile, 'w') as fh:
 	for drow in data:
 		print >>fh, "%s %s %s %s %s %s" % tuple(drow)
+	fh.close()
+
+with open(labelsfile, 'w') as fh:
+	for asn in y_min.keys():
+		print >>fh, "%s %s %s" % (asn, last_time_seen, ((y_max[asn]-y_min[asn])/2)+y_min[asn])
 	fh.close()
 
 with open(timeseriesfile, 'w') as fh:
@@ -146,7 +168,8 @@ set tmargin at screen 0.75
 
 set ytics format ""
 
-plot "{TMPFILE}" using 1:2:3:(0):(hex2rgbvalue(stringcolumn(6))) w vectors nohead lw 1.5 lc rgb variable
+plot "{TMPFILE}" using 1:2:3:(0):(hex2rgbvalue(stringcolumn(6))) w vectors nohead lw 1.5 lc rgb variable,\
+     "{LABELS}" using 2:3:1 with labels left notitle
 
 # = upper plot =============================================
 set bmargin at screen 0.8
@@ -160,7 +183,7 @@ set yrange [0:*]
 
 plot "{TIMESERIES}" using 1:2 w steps lw 1.5
 
-""".format( OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile )
+""".format( OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile, LABELS=labelsfile )
 
 
 os.system("gnuplot < %s" % tmpplot)
