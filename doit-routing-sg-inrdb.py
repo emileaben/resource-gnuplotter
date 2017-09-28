@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import arrow
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -98,6 +99,36 @@ for aidx,asn in enumerate( asns ):
 		if has_data == True:
 			idx += height
 
+annotationsFile = "annotations.json"
+annotationCount = 1
+annotationList  = []
+if os.path.exists(annotationsFile):
+	with open(annotationsFile, 'r') as fh:
+		annotations = json.loads(fh.read())
+		for record in annotations:
+			start_ts = arrow.get(record["start"]).timestamp
+			end_ts   = arrow.get(record["end"]).timestamp
+			annotateLine = "set object " + str(annotationCount) + " rectangle from \"" + str(start_ts) + "\",0 to \"" + str(end_ts) + "\","+str(idx)+" fillcolor rgb \""+record["color"]+"\" fillstyle solid noborder"
+			annotationList.append(annotateLine)
+			print annotateLine
+
+			# I'm using graph coordinates for the y-axis, so I need to determine the midpoint on the graph coordinate system for the x axis.
+			# we know: xrange, annotation range
+			xfraction = -1
+			annotationMiddle = end_ts - ((end_ts - start_ts) / 2)
+			if annotationMiddle >= START_T and annotationMiddle <= END_T:
+				fullWidth = END_T - START_T
+				xFraction = (annotationMiddle - START_T) / float(fullWidth)
+
+			label_x = end_ts - ((end_ts - start_ts) / 2)
+			label_y = -0.1
+			annotateLine = "set label \""+record["name"]+"\" at graph "+str(xFraction)+","+str(label_y) + " center font \",8\""
+			annotationList.append(annotateLine)
+
+			print annotateLine
+			annotationCount += 1
+		fh.close()
+
 pid = os.getpid()
 tmpfile        = "/tmp/ccviz.%s.%s"        % (CC, pid)
 labelsfile     = "/tmp/ccviz.%s.labels.%s" % (CC, pid)
@@ -113,7 +144,7 @@ with open(tmpfile, 'w') as fh:
 
 with open(labelsfile, 'w') as fh:
 	for asn in y_min.keys():
-		print >>fh, "%s %s %s" % (asn, last_time_seen, ((y_max[asn]-y_min[asn])/2)+y_min[asn])
+		print >>fh, "%s %s %s" % ("AS"+asn, last_time_seen, ((y_max[asn]-y_min[asn])/2)+y_min[asn])
 	fh.close()
 
 with open(timeseriesfile, 'w') as fh:
@@ -189,9 +220,11 @@ set ylabel "#prefixes"
 set ytics format "%g"
 set yrange [0:*]
 
+{ANNOTATIONS}
+
 plot "{TIMESERIES}" using 1:2 w steps lw 1.5
 
-""".format( OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile, LABELS=labelsfile, START_TS=START_T, END_TS=END_T )
+""".format( OUTFILE=outfile, TMPFILE=tmpfile, TIMESERIES=timeseriesfile, LABELS=labelsfile, START_TS=START_T, END_TS=END_T, ANNOTATIONS='\n'.join(annotationList) )
 
 
 os.system("gnuplot < %s" % tmpplot)
