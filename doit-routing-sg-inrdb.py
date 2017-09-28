@@ -93,11 +93,10 @@ for aidx,asn in enumerate( asns ):
 			deltas[start] = deltas[start] + 1
 			deltas[end]   = deltas[end]   - 1
 
-			# keep storing this
-			y_max[asn] = idx
-
 		if has_data == True:
 			idx += height
+			# keep storing this
+			y_max[asn] = idx
 
 annotationsFile = "annotations.json"
 annotationCount = 1
