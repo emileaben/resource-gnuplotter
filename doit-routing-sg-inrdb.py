@@ -48,6 +48,16 @@ for aidx,asn in enumerate( asns ):
 		fields = s.pop(0).split('|')
 		pfx = fields[2]
 		has_data = False
+
+		# pull out the network size and give it a height
+		height  = 1
+		network = pfx.split('/')[0]
+		masklen = int(pfx.split('/')[1])
+		if ":" in network and masklen <= 64 and masklen >= 32:
+			height = 65 - masklen
+		elif ":" not in network and masklen <= 24 and masklen >= 8:
+			height = 25 - masklen
+
 		for tspec in s:
 			tparts = tspec.split()
 			if len(tparts) == 0:
@@ -74,7 +84,8 @@ for aidx,asn in enumerate( asns ):
 			# hash the ASN and grab six hex digits to form the RGB value
 			rgb = "#" + hashlib.md5(str(asn)).hexdigest()[0:6]
 
-			data.append([start, idx, end-start, asn, pfx, rgb])
+#			data.append([start, end-start, idx, height, pfx, asn, rgb])
+			data.append([start, end, idx, idx+height, pfx, asn, rgb])
 
 			deltas.setdefault(start, 0)
 			deltas.setdefault(end,   0)
@@ -85,7 +96,7 @@ for aidx,asn in enumerate( asns ):
 			y_max[asn] = idx
 
 		if has_data == True:
-			idx += 1
+			idx += height
 
 pid = os.getpid()
 tmpfile        = "/tmp/ccviz.%s.%s"        % (CC, pid)
@@ -97,7 +108,7 @@ outfile        = "%s.png"                  % (CC)
 # print data to file
 with open(tmpfile, 'w') as fh:
 	for drow in data:
-		print >>fh, "%s %s %s %s %s %s" % tuple(drow)
+		print >>fh, "%s %s %s %s %s %s %s" % tuple(drow)
 	fh.close()
 
 with open(labelsfile, 'w') as fh:
@@ -149,7 +160,6 @@ set format x "%Y-%m-%d"
 set xrange [{START_TS}:{END_TS}]
 
 set ylabel "prefixes"
-set ytics format ""
 
 set rmargin at screen 0.80
 
@@ -164,7 +174,9 @@ set tmargin at screen 0.75
 
 set ytics format ""
 
-plot "{TMPFILE}" using 1:2:3:(0):(hex2rgbvalue(stringcolumn(6))) w vectors nohead lw 1.5 lc rgb variable,\
+set style fill solid noborder
+# boxxyerrors:  x y xlow xhigh ylow yhigh
+plot "{TMPFILE}" using 1:3:1:2:3:4:(hex2rgbvalue(stringcolumn(7))) w boxxyerrorbars lc rgb variable,\
      "{LABELS}" using 2:3:1 with labels left notitle
 
 # = upper plot =============================================
