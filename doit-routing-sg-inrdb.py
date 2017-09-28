@@ -207,7 +207,7 @@ set ytics format ""
 set style fill solid noborder
 # boxxyerrors:  x y xlow xhigh ylow yhigh
 plot "{TMPFILE}" using 1:3:1:2:3:4:(hex2rgbvalue(stringcolumn(7))) w boxxyerrorbars lc rgb variable,\
-     "{LABELS}" using 2:3:1 with labels left notitle
+     "{LABELS}" using 2:3:1 with labels font ",8" left notitle
 
 # = upper plot =============================================
 set bmargin at screen 0.8
