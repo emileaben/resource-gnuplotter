@@ -191,8 +191,6 @@ set xrange [{START_TS}:{END_TS}]
 
 set ylabel "prefixes"
 
-set rmargin at screen 0.80
-
 set output "{OUTFILE}"
 
 set multiplot ti "Networks as seen in RIPE RIS"
