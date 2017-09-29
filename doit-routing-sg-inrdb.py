@@ -184,9 +184,9 @@ set tics nomirror
 set xdata time
 set timefmt "%s"
 
-set xlabel "time"
+set xtics 86400
 set xtics rotate
-set format x "%Y-%m-%d"
+set format x "'%y-%m-%d\\n%H:%M"
 set xrange [{START_TS}:{END_TS}]
 
 set ylabel "prefixes"
@@ -197,7 +197,7 @@ set multiplot ti "Networks as seen in RIPE RIS"
 
 # = lower plot =============================================
 set lmargin at screen 0.05
-set bmargin at screen 0.2
+set bmargin at screen 0.13
 set tmargin at screen 0.75
 
 set ytics format ""
