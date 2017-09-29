@@ -1,13 +1,14 @@
 #!/usr/bin/env python
-import subprocess
-import requests
-from ripe.atlas.cousteau import ProbeRequest
-import ujson as json
-import sys
-import re
-import arrow
+
 import argparse
+import arrow
+import re
+import requests
+from   ripe.atlas.cousteau import ProbeRequest
+import subprocess
+import sys
 import os
+import ujson as json
 
 def parse_args():
 	parser = argparse.ArgumentParser(description='Plot probe disconnects')
