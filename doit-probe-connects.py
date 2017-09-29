@@ -139,12 +139,8 @@ def do_gnuplot(args, selector_lst, probes):
 	annotations_str = parse_annotations(args, idx)
 
 	current_time=arrow.utcnow().timestamp
-	print selector_lst
-	sys.exit(1)
 
-
-
-	plotfile = "/tmp/.plot.%s" % os.getpid()
+	gpfile = "/tmp/.plot.%s" % os.getpid()
 	ytics = ",".join( ykeys )
 	fname = ".".join(map(lambda x: x.replace('/','_') and x.replace(',','_') and x.replace(':','_') , selector_lst ) ) + ".png"
 	print >>sys.stderr,"gnuplot script in %s" % gpfile
