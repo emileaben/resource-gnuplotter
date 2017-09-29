@@ -18,7 +18,7 @@ def parse_args():
 	parser.add_argument('-a',dest='ASN', help='asn (list)')
 	parser.add_argument('-l',dest='LOC', help='location (ie. city)')
 	parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
-	parser.add_argument('--annotate', dest='ANNOTATE_FN', help='JSON file with annotations to mark on the timeline')
+	parser.add_argument('--annotate', dest='ANNOTATE_FN', help='JSON file with annotations to mark on the timeline', default="")
 	args = parser.parse_args()
 
 	## fix some to defaults
