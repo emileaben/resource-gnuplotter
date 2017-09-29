@@ -16,6 +16,7 @@ parser.add_argument('-c',dest='CC', help='country code (list)')
 parser.add_argument('-a',dest='ASN', help='asn (list)')
 parser.add_argument('-l',dest='LOC', help='location (ie. city)')
 parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
+parser.add_argument('--annotate', dest='ANNOTATE_FN', help='JSON file with annotations to mark on the timeline')
 args = parser.parse_args()
 
 selector_lst = [] # contains textual desc of selector
@@ -51,7 +52,38 @@ def locstr2latlng( locstring ):
       return ( ll['lat'], ll['lng'] )
    #except:
    #   print "could not determine lat/long for '%s'" % ( locstring )
-		
+
+def parse_annotations(args):
+	annotationCount = 1
+	annotationList  = []
+	if os.path.exists(args.ANNOTATE_FN):
+		with open(args.ANNOTATE_FN, 'r') as fh:
+			annotations = json.loads(fh.read())
+			for record in annotations:
+				start_ts = arrow.get(record["start"]).timestamp
+				end_ts   = arrow.get(record["end"]).timestamp
+				annotateLine = "set object " + str(annotationCount) + " rectangle from \"" + str(start_ts) + "\",0 to \"" + str(end_ts) + "\","+str(idx)+" fillcolor rgb \""+record["color"]+"\" fillstyle solid noborder"
+				annotationList.append(annotateLine)
+				print annotateLine
+
+				# I'm using graph coordinates for the y-axis, so I need
+				# to determine the midpoint on the graph coordinate
+				# system for the x axis.
+				# we know: xrange, annotation range
+				xfraction = -1
+				annotationMiddle = end_ts - ((end_ts - start_ts) / 2)
+				if annotationMiddle >= args.START and annotationMiddle <= args.END:
+					fullWidth = args.END - args.START
+					xFraction = (annotationMiddle - args.START) / float(fullWidth)
+
+				label_y = 0.95
+				annotateLine = "set label \""+record["name"]+"\" at graph "+str(xFraction)+","+str(label_y) + " center font \",8\""
+				annotationList.append(annotateLine)
+
+				print annotateLine
+				annotationCount += 1
+			fh.close()
+	return '\n'.join(annotationList)
 
 filters = {}
 if args.CC:
@@ -131,6 +163,8 @@ with open(datafile ,'w') as outf:
          print >>outf, "%s %s %s %s" % ( s[0],idx, s[1], idx )
       idx+=1
 
+annotations_str = parse_annotations(args)
+
 current_time=arrow.utcnow().timestamp
 
 ### now create gnuplot file
@@ -150,7 +184,7 @@ unset key
 set xdata time
 set timefmt "%s"
 set format x "'%y-%m-%dT%H:%M"
-set yrange [-0.2:]
+set yrange [-0.2:{YMAX}]
 set xtics rotate
 set ytics ({YTICS})
 
@@ -158,12 +192,14 @@ set title "RIPE Atlas probes status {SELECTOR_STR}"
 
 set arrow from {CURRENT_TS},0 to {CURRENT_TS},graph({CURRENT_TS},1) nohead lt 0 lw 2
 
+{ANNOTATIONS}
+
 set ylabel "Probes"
 set xlabel "Time (UTC)"
 
 set output "{FNAME}"
 plot "{PLFILE}" u 1:2:($3-$1):(0) w vectors nohead lw 5 lc rgb "#4682b4"
-   """.format( FNAME=fname, CURRENT_TS=current_time, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")" )
+   """.format( FNAME=fname, CURRENT_TS=current_time, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")", YMAX=idx, ANNOTATIONS=annotations_str )
 
 ## make sure local env is UTC
 os.environ['TZ']='UTC'
