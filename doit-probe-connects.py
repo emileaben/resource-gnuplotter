@@ -171,3 +171,4 @@ os.environ['TZ']='UTC'
 
 os.system("gnuplot < %s" % plotfile )
 os.system("open %s" % fname )
+
