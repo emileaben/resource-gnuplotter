@@ -194,7 +194,7 @@ set arrow from {CURRENT_TS},0 to {CURRENT_TS},graph({CURRENT_TS},1) nohead lt 0 
 
 {ANNOTATIONS}
 
-set ylabel "Probes"
+set ylabel "Probe ID/ASN"
 set xlabel "Time (UTC)"
 
 set output "{FNAME}"
