@@ -111,18 +111,23 @@ if os.path.exists(annotationsFile):
 			annotationList.append(annotateLine)
 			print annotateLine
 
-			# I'm using graph coordinates for the y-axis, so I need to determine the midpoint on the graph coordinate system for the x axis.
-			# we know: xrange, annotation range
-			xfraction = -1
-			annotationMiddle = end_ts - ((end_ts - start_ts) / 2)
-			if annotationMiddle >= START_T and annotationMiddle <= END_T:
-				fullWidth = END_T - START_T
-				xFraction = (annotationMiddle - START_T) / float(fullWidth)
+			xFraction = -1
+			# if the annotation falls within the start/end range,
+			# add the label to the plot.
+			if end_ts >= START_T and start_ts <= END_T:
+				fullWidth        = END_T  - START_T
+				annotationMiddle = ((end_ts - start_ts) / 2) + start_ts
+				label_x          = (annotationMiddle - START_T) / float(fullWidth)
+				label_y          = -0.1
+				if   "align" in record and record["align"] == "right":
+					label_x = (start_ts - START_T) / float(fullWidth)
+				elif "align" in record and record["align"] == "left":
+					label_x = (end_ts - START_T) / float(fullWidth)
+				else:
+					record["align"] = "center"
 
-			label_x = end_ts - ((end_ts - start_ts) / 2)
-			label_y = -0.1
-			annotateLine = "set label \""+record["name"]+"\" at graph "+str(xFraction)+","+str(label_y) + " center font \",8\""
-			annotationList.append(annotateLine)
+				annotateLine = "set label \""+record["name"]+"\" at graph "+str(label_x)+","+str(label_y) + " "+record["align"]+" font \",8\""
+				annotationList.append(annotateLine)
 
 			print annotateLine
 			annotationCount += 1
