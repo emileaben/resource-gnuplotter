@@ -24,34 +24,34 @@ selector_lst = [] # contains textual desc of selector
 ## fix some to defaults
 now = arrow.utcnow()
 if not args.START and not args.END:
-   args.END   = now.timestamp
-   args.START = now.replace(days=-1).timestamp
+	args.END   = now.timestamp
+	args.START = now.replace(days=-1).timestamp
 elif not args.START and args.END:
-   # do 1 day
-   end = arrow.get( args.END )
-   args.END   = end.timestamp
-   args.START = end.replace(days=-1).timestamp
+	# do 1 day
+	end = arrow.get( args.END )
+	args.END   = end.timestamp
+	args.START = end.replace(days=-1).timestamp
 elif args.START and not args.END:
-   start = arrow.get( args.START )
-   args.START = start.timestamp
-   args.END   = now.timestamp
+	start = arrow.get( args.START )
+	args.START = start.timestamp
+	args.END   = now.timestamp
 elif args.START and args.END:
-   args.START = arrow.get( args.START ).timestamp
-   args.END   = arrow.get( args.END   ).timestamp
+	args.START = arrow.get( args.START ).timestamp
+	args.END   = arrow.get( args.END   ).timestamp
 
 if not args.RADIUS:
 	args.RADIUS=50
 
 def locstr2latlng( locstring ):
-   if 1: #try:
-      geocode_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % locstring
-      r = requests.get( geocode_url )
-      resp = r.json()
-      #print >>sys.stderr, "%s" % (resp)
-      ll = resp['results'][0]['geometry']['location']
-      return ( ll['lat'], ll['lng'] )
-   #except:
-   #   print "could not determine lat/long for '%s'" % ( locstring )
+	if 1: #try:
+		geocode_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % locstring
+		r = requests.get( geocode_url )
+		resp = r.json()
+		#print >>sys.stderr, "%s" % (resp)
+		ll = resp['results'][0]['geometry']['location']
+		return ( ll['lat'], ll['lng'] )
+	#except:
+	#   print "could not determine lat/long for '%s'" % ( locstring )
 
 def parse_annotations(args):
 	annotationCount = 1
@@ -62,7 +62,7 @@ def parse_annotations(args):
 			for record in annotations:
 				start_ts = arrow.get(record["start"]).timestamp
 				end_ts   = arrow.get(record["end"]).timestamp
-				annotateLine = "set object " + str(annotationCount) + " rectangle from \"" + str(start_ts) + "\",0 to \"" + str(end_ts) + "\","+str(idx)+" fillcolor rgb \""+record["color"]+"\" fillstyle solid noborder"
+				annotateLine = "set object " + str(annotationCount) + " rectangle from \"" + str(start_ts) + "\",-0.2 to \"" + str(end_ts) + "\","+str(idx)+" fillcolor rgb \""+record["color"]+"\" fillstyle solid noborder"
 				annotationList.append(annotateLine)
 				print annotateLine
 
@@ -87,19 +87,19 @@ def parse_annotations(args):
 
 filters = {}
 if args.CC:
-   filters['country_code'] = args.CC
-   selector_lst.append( "country:%s" % ( args.CC, ) )
+	filters['country_code'] = args.CC
+	selector_lst.append( "country:%s" % ( args.CC, ) )
 if args.ASN:
-   filters['asn_v4'] = args.ASN
-   selector_lst.append( "asn:%s" % ( args.ASN, ) )
+	filters['asn_v4'] = args.ASN
+	selector_lst.append( "asn:%s" % ( args.ASN, ) )
 if args.LOC:
-   ll = locstr2latlng( args.LOC )
-   filters['radius'] = '%s,%s:%s' % (ll[0],ll[1],args.RADIUS)
-   selector_lst.append( "location:%s" % ( args.LOC, ) )
+	ll = locstr2latlng( args.LOC )
+	filters['radius'] = '%s,%s:%s' % (ll[0],ll[1],args.RADIUS)
+	selector_lst.append( "location:%s" % ( args.LOC, ) )
 ## args asn cc loc can be combined, but need at least 1 of them
 if not args.CC and not args.ASN and not args.LOC:
-   print >>sys.stderr, "needs either country,asns or location"
-   sys.exit(1)
+	print >>sys.stderr, "needs either country,asns or location"
+	sys.exit(1)
 
 print >>sys.stderr, "times: %s - %s " % ( args.START, args.END )
 print >>sys.stderr, "filters: %s" % ( filters )
@@ -108,7 +108,7 @@ print >>sys.stderr, "filters: %s" % ( filters )
 probes = {}
 pr_list = ProbeRequest(**filters)
 for p in pr_list:
-   probes[ p['id'] ] = p
+	probes[ p['id'] ] = p
 
 print >>sys.stderr, "init done!"
 
@@ -121,22 +121,22 @@ if r.status_code != 200:
 max_ts = None
 
 for line in r.text.splitlines():
-   d = json.loads( line )
-   if d['prb_id'] not in probes:
-      continue
-   pid = d['prb_id']
-   ts = d['timestamp']
-   if 'series' in probes[ pid ]:
-      if d['event'] == 'disconnect':
-         probes[ pid ]['series'][-1][1] = ts
-      if d['event'] == 'connect':
-         probes[ pid ]['series'].append( [ ts, None ] )
-   else: 
-      if d['event'] == 'disconnect':
-         probes[ pid ]['series'] = [ [ args.START, ts ] ]
-      if d['event'] == 'connect':
-         probes[ pid ]['series'] = [ [ ts, None ] ]
-   max_ts = ts
+	d = json.loads( line )
+	if d['prb_id'] not in probes:
+		continue
+	pid = d['prb_id']
+	ts = d['timestamp']
+	if 'series' in probes[ pid ]:
+		if d['event'] == 'disconnect':
+			probes[ pid ]['series'][-1][1] = ts
+		if d['event'] == 'connect':
+			probes[ pid ]['series'].append( [ ts, None ] )
+	else: 
+		if d['event'] == 'disconnect':
+			probes[ pid ]['series'] = [ [ args.START, ts ] ]
+		if d['event'] == 'connect':
+			probes[ pid ]['series'] = [ [ ts, None ] ]
+	max_ts = ts
 
 ##TODO ordering of series
 
@@ -145,23 +145,23 @@ datafile = "/tmp/.data.%s" % os.getpid()
 ykeys = []
 print >>sys.stderr,"output in %s" % datafile
 with open(datafile ,'w') as outf:
-   for k,p in probes.iteritems():
-      if not 'series' in p and p['status']['id'] == 1:
-            p['series'] = [ [ args.START, args.END ] ]
-      elif not 'series' in p:
-            continue
+	for k,p in probes.iteritems():
+		if not 'series' in p and p['status']['id'] == 1:
+			p['series'] = [ [ args.START, args.END ] ]
+		elif not 'series' in p:
+			continue
 
-      series = p['series']
-      ykeys.append( '"%s/AS%s" %s' % (k,p['asn_v4'],idx) )
+		series = p['series']
+		ykeys.append( '"%s/AS%s" %s' % (k,p['asn_v4'],idx) )
 
-      ## fix end of time
-      if series[-1][1] == None:
-         series[-1][1] = args.END
-      for s in series:
-         if s[1] == None:
-            s[1] = s[0] # ??!?! 
-         print >>outf, "%s %s %s %s" % ( s[0],idx, s[1], idx )
-      idx+=1
+		## fix end of time
+		if series[-1][1] == None:
+			series[-1][1] = args.END
+		for s in series:
+			if s[1] == None:
+				s[1] = s[0] # ??!?! 
+			print >>outf, "%s %s %s %s" % ( s[0],idx, s[1], idx )
+		idx+=1
 
 annotations_str = parse_annotations(args)
 
@@ -190,7 +190,7 @@ set ytics ({YTICS})
 
 set title "RIPE Atlas probes status {SELECTOR_STR}"
 
-set arrow from {CURRENT_TS},0 to {CURRENT_TS},graph({CURRENT_TS},1) nohead lt 0 lw 2
+set arrow from {CURRENT_TS},-0.2 to {CURRENT_TS},graph({CURRENT_TS},1) nohead lt 0 lw 2
 
 {ANNOTATIONS}
 
