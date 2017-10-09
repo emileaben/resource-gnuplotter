@@ -1,0 +1,17 @@
+[
+	{
+		"start": "2017-09-18T21:00:00Z",
+		"end": "2017-09-20T21:00:00Z",
+		"color": "0xffdddd",
+		"name":	"active hurricane warning",
+		"align": "right"
+	},
+	{
+		"start": "2017-09-20T10:15:00Z",
+		"end": "2017-09-20T16:00:00Z",
+		"color": "0xff9999",
+		"name":	"Maria landfall",
+		"align": "center"
+	}
+]
+
