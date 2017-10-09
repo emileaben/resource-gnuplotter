@@ -16,6 +16,7 @@ parser.add_argument('-c',dest='CC', help='country code (list)')
 parser.add_argument('-a',dest='ASN', help='asn (list)')
 parser.add_argument('-l',dest='LOC', help='location (ie. city)')
 parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
+parser.add_argument('-o',dest='SORT_ORDER', help='sort order to plot by. default: asn. other options: probe_id')
 args = parser.parse_args()
 
 selector_lst = [] # contains textual desc of selector
@@ -40,6 +41,9 @@ elif args.START and args.END:
 
 if not args.RADIUS:
 	args.RADIUS=50
+
+if not args.SORT_ORDER:
+	args.SORT_ORDER='asn'
 
 def locstr2latlng( locstring ):
    if 1: #try:
@@ -107,20 +111,28 @@ for line in r.text.splitlines():
    max_ts = ts
 
 ##TODO ordering of series
+# default to v4asn
+pr_sorted_list = []
+if args.SORT_ORDER == 'probe_id':
+	pr_sorted_list = sorted( probes.keys(), reverse=True )
+else:
+	# default
+	pr_sorted_list = sorted( probes.keys(), key=lambda x: probes[x]['asn_v4'], reverse=True )
 
 idx=0
 datafile = "/tmp/.data.%s" % os.getpid()
 ykeys = []
 print >>sys.stderr,"output in %s" % datafile
 with open(datafile ,'w') as outf:
-   for k,p in probes.iteritems():
+   for pid in pr_sorted_list:
+      p = probes[ pid ]
       if not 'series' in p and p['status']['id'] == 1:
             p['series'] = [ [ args.START, args.END ] ]
       elif not 'series' in p:
             continue
 
       series = p['series']
-      ykeys.append( '"%s/AS%s" %s' % (k,p['asn_v4'],idx) )
+      ykeys.append( '"%s/AS%s" %s' % (pid,p['asn_v4'],idx) )
 
       ## fix end of time
       if series[-1][1] == None:
