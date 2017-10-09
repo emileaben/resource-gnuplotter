@@ -40,7 +40,7 @@ set format x "%d %b-%Hh"
 set xtics rotate
 unset ytics
 
-set title "RIPE Atlas probes in the Netherlands connected to RIPE Atlas infrastucture\n(only probes with disconnects shown)"
+set title "RIPE Atlas probes in $CC connected to RIPE Atlas infrastucture\n(only probes with disconnects shown)"
 
 set ylabel "Probes"
 set xlabel "Time"
