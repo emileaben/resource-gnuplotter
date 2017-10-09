@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import hashlib
 import argparse
 import arrow
 import re
@@ -19,6 +19,7 @@ def parse_args():
 	parser.add_argument('-l',dest='LOC', help='location (ie. city)')
 	parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
 	parser.add_argument('-o',dest='SORT_ORDER', help='sort order to plot by. default: asn. other options: probe_id')
+	parser.add_argument('--color-by',dest='COLOR_BY', help='property to color lines by. default: asn. other options: TODO')
 	parser.add_argument('--annotate', dest='ANNOTATE_FN', help='JSON file with annotations to mark on the timeline', default="")
 	args = parser.parse_args()
 
@@ -129,10 +130,13 @@ def do_gnuplot(args, selector_lst, probes):
 	else:
 	# default
 		pr_sorted_list = sorted( probes.keys(), key=lambda x: probes[x]['asn_v4'], reverse=True )
+
 	print >>sys.stderr,"data in %s" % datafile
 	with open(datafile ,'w') as outf:
 		for prb_id in pr_sorted_list:
 			p = probes[ prb_id ]
+			## color by. TODO different options
+			rgb = "#" + hashlib.md5(str( p['asn_v4'] )).hexdigest()[0:6]
 			if not 'series' in p and p['status']['id'] == 1:
 				p['series'] = [ [ args.START, args.END ] ]
 			elif not 'series' in p:
@@ -147,7 +151,7 @@ def do_gnuplot(args, selector_lst, probes):
 			for s in series:
 				if s[1] == None:
 					s[1] = s[0] # ??!?! 
-				print >>outf, "%s %s %s %s" % ( s[0], idx, s[1], idx )
+				print >>outf, "%s %s %s %s %s" % ( s[0], idx, s[1], idx, rgb )
 			idx+=1
 
 	annotations_str = parse_annotations(args, idx)
@@ -161,6 +165,17 @@ def do_gnuplot(args, selector_lst, probes):
 	with open(gpfile, 'w') as outf:
 		print >>outf, """
 set term pngcairo size 1000,600
+
+set palette model RGB
+
+# these functions are a bit ugly but they rip apart RGB values as strings
+# and turn them into RGB values for plotting
+red(colorstring)    = colorstring[2:3]
+green(colorstring)  = colorstring[4:5]
+blue(colorstring)   = colorstring[6:7]
+hex2dec(hex)        = gprintf("%0.f",int('0X'.hex))
+rgb(r,g,b)          = 65536*int(r)+256*int(g)+int(b)
+hex2rgbvalue(color) = rgb( hex2dec(red(color)), hex2dec(green(color)), hex2dec(blue(color)) )
 
 set grid xtics
 set tics nomirror
@@ -184,7 +199,7 @@ set ylabel "Probe ID/ASN"
 set xlabel "Time (UTC)"
 
 set output "{FNAME}"
-plot "{PLFILE}" u 1:2:($3-$1):(0) w vectors nohead lw 5 lc rgb "#4682b4"
+plot "{PLFILE}" u 1:2:($3-$1):(0):(hex2rgbvalue(stringcolumn(5))) w vectors nohead lw 5 lc rgb variable
 		""".format( FNAME=fname, CURRENT_TS=current_time, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")", YMAX=idx, ANNOTATIONS=annotations_str )
 
 	print >>sys.stderr, "output in %s" % fname
