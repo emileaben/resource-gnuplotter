@@ -19,7 +19,7 @@ def parse_args():
 	parser.add_argument('-l',dest='LOC', help='location (ie. city)')
 	parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
 	parser.add_argument('-o',dest='SORT_ORDER', help='sort order to plot by. default: asn. other options: probe_id')
-	parser.add_argument('--color-by',dest='COLOR_BY', help='property to color lines by. default: asn. other options: TODO')
+	parser.add_argument('--color-by',dest='COLOR_BY', help='property to color lines by. default: asn. other options: tag:<tag>')
 	parser.add_argument('--annotate', dest='ANNOTATE_FN', help='JSON file with annotations to mark on the timeline', default="")
 	args = parser.parse_args()
 
@@ -136,7 +136,15 @@ def do_gnuplot(args, selector_lst, probes):
 		for prb_id in pr_sorted_list:
 			p = probes[ prb_id ]
 			## color by. TODO different options
-			rgb = "#" + hashlib.md5(str( p['asn_v4'] )).hexdigest()[0:6]
+			## added 'aap' here because without 7018 and 7922 have identical colors
+			rgb = '#4682b4'
+			if args.COLOR_BY.startswith('tag:'):
+				color_tags = args.COLOR_BY[4:].split(',')
+				for probe_tag in p['tags']:
+					if probe_tag['slug'] in color_tags:
+						rgb  = '#ff8c00'
+			else:
+				rgb = "#" + hashlib.md5("aap" + str( p['asn_v4'] )).hexdigest()[0:6]
 			if not 'series' in p and p['status']['id'] == 1:
 				p['series'] = [ [ args.START, args.END ] ]
 			elif not 'series' in p:
