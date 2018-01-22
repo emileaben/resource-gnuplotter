@@ -19,7 +19,7 @@ def parse_args():
 	parser.add_argument('-l',dest='LOC', help='location (ie. city)')
 	parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
 	parser.add_argument('-o',dest='SORT_ORDER', help='sort order to plot by. default: asn. other options: probe_id')
-	parser.add_argument('--color-by',dest='COLOR_BY', help='property to color lines by. default: asn. other options: tag:<tag>')
+	parser.add_argument('--color-by',dest='COLOR_BY', help='property to color lines by. default: asn. other options: tag:<tag>,<tag>')
 	parser.add_argument('--annotate', dest='ANNOTATE_FN', help='JSON file with annotations to mark on the timeline', default="")
 	args = parser.parse_args()
 
@@ -46,6 +46,9 @@ def parse_args():
 
 	if not args.SORT_ORDER:
 		args.SORT_ORDER='asn'
+
+	if not args.COLOR_BY:
+		args.COLOR_BY='asn'
 
 	selector_lst = [] # contains textual desc of selector
 	filters = {}
@@ -166,13 +169,15 @@ def do_gnuplot(args, selector_lst, probes):
 
 	current_time=arrow.utcnow().timestamp
 
+	img_y_size = max( 600, idx*10)
+
 	gpfile = "/tmp/.plot.%s" % os.getpid()
 	ytics = ",".join( ykeys )
 	fname = ".".join(map(lambda x: x.replace('/','_') and x.replace(',','_') and x.replace(':','_') , selector_lst ) ) + ".png"
 	print >>sys.stderr,"gnuplot script in %s" % gpfile
 	with open(gpfile, 'w') as outf:
 		print >>outf, """
-set term pngcairo size 1000,600
+set term pngcairo size 1000,{IMG_Y_SIZE}
 
 set palette model RGB
 
@@ -208,7 +213,7 @@ set xlabel "Time (UTC)"
 
 set output "{FNAME}"
 plot "{PLFILE}" u 1:2:($3-$1):(0):(hex2rgbvalue(stringcolumn(5))) w vectors nohead lw 5 lc rgb variable
-		""".format( FNAME=fname, CURRENT_TS=current_time, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")", YMAX=idx, ANNOTATIONS=annotations_str )
+		""".format( FNAME=fname, CURRENT_TS=current_time, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")", YMAX=idx, ANNOTATIONS=annotations_str, IMG_Y_SIZE=img_y_size )
 
 	print >>sys.stderr, "output in %s" % fname
 
