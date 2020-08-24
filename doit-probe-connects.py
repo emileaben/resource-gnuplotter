@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import hashlib
 import argparse
-import arrow
 import re
 import requests
 from   ripe.atlas.cousteau import ProbeRequest
@@ -9,6 +8,11 @@ import subprocess
 import sys
 import os
 import ujson as json
+try:
+    from functools import lru_cache
+except ImportError:
+    from backports.functools_lru_cache import lru_cache
+import arrow
 
 def parse_args():
 	parser = argparse.ArgumentParser(description='Plot probe disconnects')
@@ -64,11 +68,11 @@ def parse_args():
 		selector_lst.append( "location:%s" % ( args.LOC, ) )
 	## args asn cc loc can be combined, but need at least 1 of them
 	if not args.CC and not args.ASN and not args.LOC:
-		print >>sys.stderr, "needs either country,asns or location"
+		print( "needs either country,asns or location" )
 		sys.exit(1)
 
-	print >>sys.stderr, "times: %s - %s " % ( args.START, args.END )
-	print >>sys.stderr, "filters: %s" % ( filters )
+	print( "times: %s - %s " % ( args.START, args.END ) , file=sys.stderr )
+	print( "filters: %s" % ( filters ) , file=sys.stderr )
 
 	probes = {}
 	pr_list = ProbeRequest(**filters)
@@ -100,7 +104,7 @@ def parse_annotations(args, idx):
 				end_ts   = arrow.get(record["end"]).timestamp
 				annotateLine = "set object " + str(annotationCount) + " rectangle from \"" + str(start_ts) + "\",-0.2 to \"" + str(end_ts) + "\","+str(idx)+" fillcolor rgb \""+record["color"]+"\" fillstyle solid noborder"
 				annotationList.append(annotateLine)
-				print annotateLine
+				print(annotateLine)
 
 				# I'm using graph coordinates for the y-axis, so I need
 				# to determine the midpoint on the graph coordinate
@@ -116,10 +120,16 @@ def parse_annotations(args, idx):
 				annotateLine = "set label \""+record["name"]+"\" at graph "+str(xFraction)+","+str(label_y) + " center font \",8\""
 				annotationList.append(annotateLine)
 
-				print annotateLine
+				print(annotateLine)
 				annotationCount += 1
 			fh.close()
 	return '\n'.join(annotationList)
+
+def none2int( val ):
+	if val is None:
+		return 0
+	else:
+		return int( val )
 
 def do_gnuplot(args, selector_lst, probes):
 	idx = 0
@@ -132,9 +142,9 @@ def do_gnuplot(args, selector_lst, probes):
 		pr_sorted_list = sorted( probes.keys(), reverse=True )
 	else:
 	# default
-		pr_sorted_list = sorted( probes.keys(), key=lambda x: probes[x]['asn_v4'], reverse=True )
+		pr_sorted_list = sorted( probes.keys(), key=lambda x: none2int( probes[x]['asn_v4'] ), reverse=True )
 
-	print >>sys.stderr,"data in %s" % datafile
+	print( "data in %s" % datafile, file=sys.stderr )
 	with open(datafile ,'w') as outf:
 		for prb_id in pr_sorted_list:
 			p = probes[ prb_id ]
@@ -147,7 +157,9 @@ def do_gnuplot(args, selector_lst, probes):
 					if probe_tag['slug'] in color_tags:
 						rgb  = '#ff8c00'
 			else:
-				rgb = "#" + hashlib.md5("aap" + str( p['asn_v4'] )).hexdigest()[0:6]
+				hashable = "aap%s" % p['asn_v4']
+				hashable = hashable.encode('utf-8')
+				rgb = "#" + hashlib.md5( hashable ).hexdigest()[0:6]
 			if not 'series' in p and p['status']['id'] == 1:
 				p['series'] = [ [ args.START, args.END ] ]
 			elif not 'series' in p:
@@ -162,7 +174,7 @@ def do_gnuplot(args, selector_lst, probes):
 			for s in series:
 				if s[1] == None:
 					s[1] = s[0] # ??!?! 
-				print >>outf, "%s %s %s %s %s" % ( s[0], idx, s[1], idx, rgb )
+				print( "%s %s %s %s %s" % ( s[0], idx, s[1], idx, rgb ) , file=outf )
 			idx+=1
 
 	annotations_str = parse_annotations(args, idx)
@@ -174,9 +186,9 @@ def do_gnuplot(args, selector_lst, probes):
 	gpfile = "/tmp/.plot.%s" % os.getpid()
 	ytics = ",".join( ykeys )
 	fname = ".".join(map(lambda x: x.replace('/','_') and x.replace(',','_') and x.replace(':','_') , selector_lst ) ) + ".png"
-	print >>sys.stderr,"gnuplot script in %s" % gpfile
+	print( "gnuplot script in %s" % gpfile , file=sys.stderr )
 	with open(gpfile, 'w') as outf:
-		print >>outf, """
+		print ("""
 set term pngcairo size 1000,{IMG_Y_SIZE}
 
 set palette model RGB
@@ -212,10 +224,10 @@ set ylabel "Probe ID/ASN"
 set xlabel "Time (UTC)"
 
 set output "{FNAME}"
-plot "{PLFILE}" u 1:2:($3-$1):(0):(hex2rgbvalue(stringcolumn(5))) w vectors nohead lw 5 lc rgb variable
-		""".format( FNAME=fname, CURRENT_TS=current_time, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")", YMAX=idx, ANNOTATIONS=annotations_str, IMG_Y_SIZE=img_y_size )
+plot "{PLFILE}" u 1:2:($3-$1):(0):(hex2rgbvalue(stringcolumn(5))) w vectors nohead lw 6 lc rgb variable
+		""".format( FNAME=fname, CURRENT_TS=current_time, YTICS=ytics, CC=args.CC, START=args.START, PLFILE=datafile, SELECTOR_STR= "(" + ' '.join( selector_lst ) + ")", YMAX=idx, ANNOTATIONS=annotations_str, IMG_Y_SIZE=img_y_size ), file=outf )
 
-	print >>sys.stderr, "output in %s" % fname
+	print( "output in %s" % fname , file=sys.stderr )
 
 	## make sure local env is UTC
 	os.environ['TZ']='UTC'
@@ -224,9 +236,10 @@ plot "{PLFILE}" u 1:2:($3-$1):(0):(hex2rgbvalue(stringcolumn(5))) w vectors nohe
 
 def main():
 	(args, selector_lst, probes) = parse_args()
-	print >>sys.stderr, "init done!"
+	print("init done!", file=sys.stderr )
 
 	api_call="https://atlas.ripe.net/api/v2/measurements/7000/results?start=%s&stop=%s&format=txt" % ( args.START, args.END )
+	print("api url: %s" % api_call , file=sys.stderr )
 	r = requests.get(api_call)
 	if r.status_code != 200:
 		print >>sys.stderr, "Received status code "+str(r.status_code)+" from "+api_call
