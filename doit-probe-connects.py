@@ -21,6 +21,7 @@ def parse_args():
 	parser.add_argument('-c',dest='CC', help='country code (list)')
 	parser.add_argument('-a',dest='ASN', help='asn (list)')
 	parser.add_argument('-l',dest='LOC', help='location (ie. city)')
+	parser.add_argument('-b',dest='BOX', help='location (bounding box)')
 	parser.add_argument('-r',dest='RADIUS', help='radius around location (together with -l). default 50km')
 	parser.add_argument('-o',dest='SORT_ORDER', help='sort order to plot by. default: asn. other options: probe_id')
 	parser.add_argument('--color-by',dest='COLOR_BY', help='property to color lines by. default: asn. other options: tag:<tag>,<tag>')
@@ -66,9 +67,22 @@ def parse_args():
 		ll = locstr2latlng( args.LOC )
 		filters['radius'] = '%s,%s:%s' % (ll[0],ll[1],args.RADIUS)
 		selector_lst.append( "location:%s" % ( args.LOC, ) )
+	if args.BOX:
+		line = args.BOX.split(",")
+		lat1 = line[0]
+		lon1 = line[1]
+		lat2 = line[2]
+		lon2 = line[3]
+
+		filters['latitude__gte']  = lat1
+		filters['longitude__gte'] = lon1
+		filters['latitude__lte']  = lat2
+		filters['longitude__lte'] = lon2
+
+		selector_lst.append( "box:%5.2f,%5.2f:%5.2f,%5.2f" % ( float(lat1), float(lon1), float(lat2), float(lon2) ) )
 	## args asn cc loc can be combined, but need at least 1 of them
-	if not args.CC and not args.ASN and not args.LOC:
-		print( "needs either country,asns or location" )
+	if not args.CC and not args.ASN and not args.LOC and not args.BOX:
+		print( "needs either country (-c), asns (-a), or location (-l or -b)" )
 		sys.exit(1)
 
 	print( "times: %s - %s " % ( args.START, args.END ) , file=sys.stderr )
