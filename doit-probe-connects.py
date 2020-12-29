@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import geocoder
 import hashlib
 import argparse
 import re
@@ -83,15 +84,8 @@ def parse_args():
 
 
 def locstr2latlng( locstring ):
-	if 1: #try:
-		geocode_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % locstring
-		r = requests.get( geocode_url )
-		resp = r.json()
-		#print >>sys.stderr, "%s" % (resp)
-		ll = resp['results'][0]['geometry']['location']
-		return ( ll['lat'], ll['lng'] )
-	#except:
-	#   print "could not determine lat/long for '%s'" % ( locstring )
+        g = geocoder.geonames(locstring, key='emileaben')
+        return g.latlng
 
 def parse_annotations(args, idx):
 	annotationCount = 1
