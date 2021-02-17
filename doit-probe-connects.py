@@ -68,6 +68,7 @@ def parse_args():
 		ll = locstr2latlng( args.LOC )
 		filters['radius'] = '%s,%s:%s' % (ll[0],ll[1],args.RADIUS)
 		selector_lst.append( "location:%s" % ( args.LOC, ) )
+		selector_lst.append( "radius:%skm" % ( args.RADIUS, ) )
 	if args.BOX:
 		line = args.BOX.split(",")
 		lat1 = line[0]
